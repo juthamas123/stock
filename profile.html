@@ -1,0 +1,1035 @@
+<?php
+require 'db_connect.php';
+session_start();
+
+// ✅ ตรวจสอบการล็อกอิน
+if (!isset($_SESSION['user_id'])) {
+    header('Location: chackout.php');
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+
+// ✅ ดึงข้อมูลผู้ใช้จากฐานข้อมูล
+$stmt = $pdo->prepare("SELECT id, username, email, created_at FROM users WHERE id = ?");
+$stmt->execute([$user_id]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$user) {
+    die("❌ ไม่พบข้อมูลผู้ใช้ในระบบ");
+}
+?>
+
+
+<?php
+session_start();
+$current_page = basename($_SERVER['PHP_SELF']);
+?>
+<nav class="navbar navbar-light bg-white navbar-expand-xl">
+    <a href="index.php" class="navbar-brand"><h1 class="text-primary display-6">MY STOCK</h1></a>
+    <button class="navbar-toggler py-2 px-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+        <span class="fa fa-bars text-primary"></span>
+    </button>
+
+    <div class="collapse navbar-collapse bg-white" id="navbarCollapse">
+        <div class="navbar-nav mx-auto">
+            <a href="index.php" class="nav-item nav-link <?= $current_page == 'index.php' ? 'active' : '' ?>">หน้าแรก</a>
+            <a href="shop.php" class="nav-item nav-link <?= $current_page == 'shop.php' ? 'active' : '' ?>">สต็อก</a>
+            <a href="shop-detail.php" class="nav-item nav-link <?= $current_page == 'shop-detail.php' ? 'active' : '' ?>">คิวขนส่ง</a>
+            <a href="cart.php" class="nav-item nav-link <?= $current_page == 'cart.php' ? 'active' : '' ?>">ออร์เดอร์</a>
+            <a href="contact.php" class="nav-item nav-link <?= $current_page == 'contact.php' ? 'active' : '' ?>">ติดต่อ</a>
+        </div>
+
+        <div class="d-flex align-items-center">
+            <?php if (isset($_SESSION['user'])): ?>
+                <div class="d-flex align-items-center me-3">
+                    <i class="fa-solid fa-user-circle text-success fs-4 me-2"></i>
+                    <span class="fw-semibold text-secondary"><?= htmlspecialchars($_SESSION['user']); ?></span>
+                </div>
+                <a href="logout.php" class="btn btn-outline-danger btn-sm">ออกจากระบบ</a>
+            <?php else: ?>
+                <a href="login.php" class="btn btn-outline-primary btn-sm me-2">เข้าสู่ระบบ</a>
+                <a href="register.php" class="btn btn-success btn-sm">สมัครสมาชิก</a>
+            <?php endif; ?>
+        </div>
+    </div>
+</nav>
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <title>โปรไฟล์ของฉัน - MY STOCK</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"/>
+</head>
+
+<body>
+    <!-- ✅ Navbar -->
+    <div class="container-fluid fixed-top">
+        <div class="container px-0">
+            <nav class="navbar navbar-light bg-white navbar-expand-xl">
+                <a href="index.php" class="navbar-brand"><h1 class="text-primary display-6">MY STOCK</h1></a>
+                <button class="navbar-toggler py-2 px-3" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarCollapse"><span class="fa fa-bars text-primary"></span></button>
+                <div class="collapse navbar-collapse bg-white" id="navbarCollapse">
+                    <div class="navbar-nav mx-auto">
+                        <a href="index.php" class="nav-item nav-link">หน้าแรก</a>
+                        <a href="shop.php" class="nav-item nav-link">สต็อก</a>
+                        <a href="shop-detail.php" class="nav-item nav-link">คิวขนส่ง</a>
+                        <a href="cart.php" class="nav-item nav-link">ออร์เดอร์</a>
+                        <a href="contact.php" class="nav-item nav-link">ติดต่อ</a>
+                        <a href="profile.php" class="nav-item nav-link active">โปรไฟล์</a>
+                    </div>
+                    <div class="d-flex m-3 me-0">
+                        <a href="profile.php" class="my-auto">
+                            <i class="fas fa-user-circle fa-2x text-primary"></i>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+    <!-- ✅ Header -->
+    <div class="container-fluid page-header py-5 mt-5">
+        <h1 class="text-center text-white display-6">โปรไฟล์ของฉัน</h1>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="index.php">หน้าแรก</a></li>
+            <li class="breadcrumb-item active text-white">โปรไฟล์</li>
+        </ol>
+    </div>
+
+    <!-- ✅ แสดงข้อมูลผู้ใช้ -->
+    <div class="container my-5 py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card shadow p-4 border-0 rounded-3">
+                    <h3 class="text-center mb-4 text-primary">ข้อมูลผู้ใช้</h3>
+
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 30%;">รหัสผู้ใช้ (ID)</th>
+                            <td><?= htmlspecialchars($user['id']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>ชื่อผู้ใช้ (Username)</th>
+                            <td><?= htmlspecialchars($user['username']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>อีเมล (Email)</th>
+                            <td><?= htmlspecialchars($user['email']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>วันที่สมัคร</th>
+                            <td><?= htmlspecialchars($user['created_at']) ?></td>
+                        </tr>
+                    </table>
+
+                    <div class="text-center mt-4">
+                        <a href="logout.php" class="btn btn-danger px-4 rounded-pill">
+                            <i class="fas fa-sign-out-alt me-2"></i>ออกจากระบบ
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ Footer -->
+    <div class="container-fluid bg-dark text-white-50 footer pt-5 mt-5">
+        <div class="container text-center py-4">
+            <p class="text-light mb-0">© 2025 MY STOCK | Designed by HTML Codex</p>
+        </div>
+    </div>
+<div class="text-center mt-4">
+    <a href="logout.php" class="btn btn-danger rounded-pill px-4">
+        <i class="fas fa-sign-out-alt me-2"></i> ออกจากระบบ
+    </a>
+</div>
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+
+<?php
+// ✅ ต้องมีแค่ 1 ครั้งเท่านั้น
+session_start();
+require_once __DIR__ . '/db_connect.php';
+include 'navbar.php'; // ✅ ใช้ navbar ที่คุณมีอยู่แล้ว
+
+// ดึงข้อมูลจากฐานข้อมูล (หากต้องใช้)
+try {
+    $stmt = $pdo->query("SELECT * FROM shipping_queue ORDER BY id DESC");
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $rows = [];
+}
+
+// ปิด cache เพื่อให้แสดงชื่อใหม่หลังแก้ไขได้ทันที
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: 0");
+
+$current_page = basename($_SERVER['PHP_SELF']);
+?>
+
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="utf-8">
+    <title>สต็อกสินค้า | MY STOCK</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Raleway:wght@600;800&display=swap" rel="stylesheet">
+
+    <!-- Icon Font Stylesheet -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link href="lib/lightbox/css/lightbox.min.css" rel="stylesheet">
+    <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Template Stylesheet -->
+    <link href="css/style.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- ✅ Navbar อยู่ใน include แล้ว ไม่ต้องมีอีก -->
+
+    <!-- ✅ Header -->
+    <div class="container-fluid page-header py-5">
+        <h1 class="text-center text-white display-6">สต็อกสินค้า</h1>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="#">หน้าแรก</a></li>
+            <li class="breadcrumb-item active text-white">สต็อก</li>
+        </ol>
+    </div>
+
+    <!-- ✅ ส่วนนี้คงไว้เหมือนเดิม 100% -->
+    <!-- ✅ เริ่มส่วน summary cards -->
+    <div class="summary-cards-container">
+        <div class="summary-card fence">
+            <h4>แผ่นรั้วทั้งหมด</h4>
+            <h2>1,250</h2>
+        </div>
+        <div class="summary-card pillar">
+            <h4>เสาทั้งหมด</h4>
+            <h2>980</h2>
+        </div>
+        <div class="summary-card wall">
+            <h4>แผ่นกันดินทั้งหมด</h4>
+            <h2>670</h2>
+        </div>
+        <div class="summary-card beam">
+            <h4>ทับหลังทั้งหมด</h4>
+            <h2>420</h2>
+        </div>
+    </div>
+
+    <!-- ✅ ส่วนแท็บสินค้าทั้งหมด -->
+    <div class="container-fluid fruite py-5">
+        <div class="container py-5">
+            <div class="tab-class text-center">
+                <!-- ✅ ส่วนของแท็บ (ทั้งหมดเหมือนเดิม) -->
+                <!-- ... ใส่เนื้อหาตารางสินค้าทั้งหมดของคุณได้เลย -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ Footer -->
+    <div class="container-fluid bg-dark text-white-50 footer pt-5 mt-5">
+        <div class="container py-5">
+            <div class="pb-4 mb-4 text-center" style="border-bottom: 1px solid rgba(226, 175, 24, 0.5);">
+                <h4 class="text-light mb-3">ทำไมถึงทำระบบสต็อกสินค้า!</h4>
+                <p>ป้องกันสินค้าขาดสต็อก / ลดสินค้าส่วนเกิน / จัดส่งแม่นยำ</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ ปุ่มกลับขึ้นบน -->
+    <a href="#" class="btn btn-primary border-3 border-primary rounded-circle back-to-top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+
+    <!-- ✅ Script เดิม -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="lib/easing/easing.min.js"></script>
+    <script src="lib/waypoints/waypoints.min.js"></script>
+    <script src="lib/lightbox/js/lightbox.min.js"></script>
+    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
+
+
+
+
+    <!-- Single Page Header End -->
+<div class="container-fluid fruite py-5">
+    <div class="container py-5">
+        <div class="tab-class text-center">
+            <div class="row g-4">
+                <div class="col-lg-4 text-start">
+                    <h1>สินค้าทั้งหมด</h1>
+                </div>
+                <div class="col-lg-8 text-end">
+                    <ul class="nav nav-pills d-inline-flex text-center mb-5">
+                        <li class="nav-item">
+                            <a class="d-flex mx-1 py-2 bg-light rounded-pill active" data-bs-toggle="pill"
+                                href="#tab-1">
+                                <span class="text-dark" style="width: 130px;">สินค้าทั้งหมด</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="d-flex py-2 mx-1 bg-light rounded-pill" data-bs-toggle="pill" href="#tab-2">
+                                <span class="text-dark" style="width: 130px;">แผ่นรั้วสำเร็จรูป</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="d-flex mx-1 py-2 bg-light rounded-pill" data-bs-toggle="pill" href="#tab-3">
+                                <span class="text-dark" style="width: 130px;">เสารั้วไอ15</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="d-flex mx-1 py-2 bg-light rounded-pill" data-bs-toggle="pill" href="#tab-6">
+                                <span class="text-dark" style="width: 130px;">เสาเข็มไอ18</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="d-flex mx-1 py-2 bg-light rounded-pill" data-bs-toggle="pill" href="#tab-4">
+                                <span class="text-dark" style="width: 130px;">ทับหลัง</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="d-flex mx-1 py-2 bg-light rounded-pill" data-bs-toggle="pill" href="#tab-5">
+                                <span class="text-dark">แผ่นกันดิน</span> 
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+    <!-- เนื้อหาแต่ละแท็บ -->
+    <div class="tab-content">
+
+        <style>
+/* ===== ตารางสินค้า ===== */
+.table-container {
+    margin: 40px auto;
+    max-width: 1200px; /* ✅ เพิ่มจาก 1000 เป็น 1200 */
+    width: 95%; /* ✅ ขยายให้เต็มหน้ามากขึ้น */
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+
+.product-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Prompt", sans-serif;
+    color: #333;
+    font-size: 16px; /* ✅ เพิ่มขนาดตัวอักษร */
+}
+
+.product-table thead {
+    background-color: #f7f9fa;
+    font-weight: 600;
+    color: #555;
+}
+
+.product-table th, .product-table td {
+    padding: 16px 20px; /* ✅ เพิ่ม padding ให้ช่องใหญ่ขึ้น */
+    text-align: center;
+    border-bottom: 1px solid #eee;
+}
+
+.product-table th {
+    background-color: #f2f5f4;
+    font-size: 16px;
+}
+
+.product-table tbody tr:hover {
+    background-color: #f9fdf9;
+    transition: 0.2s;
+}
+
+.product-table td img {
+    width: 70px; /* ✅ รูปใหญ่ขึ้น */
+    height: 70px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.stock {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.reserved {
+    color: #FFA726;
+    font-weight: bold;
+}
+
+.sold {
+    color: #E53935;
+    font-weight: bold;
+}
+</style>
+
+        <!-- สินค้าทั้งหมด -->
+        <div id="tab-1" class="tab-pane fade show active">
+            <div class="table-container">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>รูปภาพ</th>
+                            <th>รหัสสินค้า</th>
+                            <th>สินค้า</th>
+                            <th>ราคา</th>
+                            <th>สต็อก</th>
+                            <th>จอง</th>
+                            <th>คงเหลือ</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><img src="img/no1.jpg" alt=""></td>
+                            <td>AN001</td>
+                            <td>แผ่นรั้วสำเร็จรูปแบบลิ่ม ขนาด 2.91 เมตร</small></td>
+                            <td>240</td>
+                            <td class="stock">50</td>
+                            <td class="reserved">21</td>
+                            <td class="sold">64</td>
+                        </tr>
+                        <tr>
+                            <td><img src="img/no1.jpg" alt=""></td>
+                            <td>AN002</td>
+                            <td>แผ่นรั้วสำเร็จรูปแบบลิ่ม ขนาด 2.42 เมตร</td>
+                            <td>210</td>
+                            <td class="stock">9</td>
+                            <td class="reserved">6</td>
+                            <td class="sold">30</td>
+                        </tr>
+                        <tr>
+                            <td><img src="img/no2.jpg" alt=""></td>
+                            <td>AN003</td>
+                            <td>แผ่นรั้วสำเร็จรูปแบบเรียบ ขนาด 2.91 เมตร</td>
+                            <td>240</td>
+                            <td class="stock">20</td>
+                            <td class="reserved">13</td>
+                            <td class="sold">0</td>
+                        </tr>
+                        <tr>
+                            <td><img src="img/no2.jpg" alt=""></td>
+                            <td>AN004</td>
+                            <td>แผ่นรั้วสำเร็จรูปแบบเรียบ ขนาด 2.42 เมตร</td>
+                            <td>210</td>
+                            <td class="stock">20</td>
+                            <td class="reserved">0</td>
+                            <td class="sold">0</td>
+                        </tr>
+                        <!-- เสาไอ15รวม -->
+                        <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK001</td>
+                            <td>เสารั้วไอ15*15*2.00 เมตร</td>
+                            <td>260</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK002</td>
+                            <td>เสารั้วไอ15*15*2.20 เมตร</td>
+                            <td>286</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK003</td>
+                            <td>เสารั้วไอ15*15*2.50 เมตร</td>
+                            <td>325</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK004</td>
+                            <td>เสารั้วไอ15*15*2.75 เมตร</td>
+                            <td>357.50</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK005</td>
+                            <td>เสารั้วไอ15*15*3.00 เมตร</td>
+                            <td>390</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK006</td>
+                            <td>เสารั้วไอ15*15*3.50 เมตร</td>
+                            <td>455</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK007</td>
+                            <td>เสารั้วไอ15*15*4.00 เมตร</td>
+                            <td>520</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK008</td>
+                            <td>เสารั้วไอ15*15*5.00 เมตร</td>
+                            <td>650</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK009</td>
+                            <td>เสารั้วไอ15*15*6.00 เมตร</td>
+                            <td>780</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                         <!-- เสาไอ18รวม -->
+                        <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP001</td>
+                            <td>เสาเข็มไอ18*18*2.00 เมตร</td>
+                            <td>300</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP002</td>
+                            <td>เสาเข็มไอ18*18*3.00 เมตร</td>
+                            <td>450</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP003</td>
+                            <td>เสาเข็มไอ18*18*4.00 เมตร</td>
+                            <td>600</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP004</td>
+                            <td>เสาเข็มไอ18*18*5.00 เมตร</td>
+                            <td>750</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP005</td>
+                            <td>เสาเข็มไอ18*18*6.00 เมตร</td>
+                            <td>900</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                         <!-- ทับหลัง -->
+                        <tr>
+                            <td><img src="img/no7.jpg" alt=""></td>
+                            <td>AM001</td>
+                            <td>ทับหลังครอบ ขนาด 2.85 เมตร</td>
+                            <td>260</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no7.jpg" alt=""></td>
+                            <td>AM002</td>
+                            <td>ทับหลังครอบ ขนาด 2.42 เมตร</td>
+                            <td>260</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no6.jpg" alt=""></td>
+                            <td>AM003</td>
+                            <td>ทับหลังตัวที ขนาด 2.91 เมตร</td>
+                            <td>460</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                         <!-- กันดิน -->
+                        <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK001</td>
+                            <td>แผ่นกันดิน ขนาด 1.00 เมตร</td>
+                            <td>100</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK002</td>
+                            <td>แผ่นกันดิน ขนาด 1.42 เมตร</td>
+                            <td>142</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK003</td>
+                            <td>แผ่นกันดิน ขนาด 2.00 เมตร</td>
+                            <td>200</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK004</td>
+                            <td>แผ่นกันดิน ขนาด 2.42 เมตร</td>
+                            <td>1242</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK005</td>
+                            <td>แผ่นกันดิน ขนาด 2.91 เมตร</td>
+                            <td>291</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK006</td>
+                            <td>แผ่นกันดิน ขนาด 3.00 เมตร</td>
+                            <td>300</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK007</td>
+                            <td>แผ่นกันดิน ขนาด 3.50 เมตร</td>
+                            <td>350</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- แผ่นรั้วสำเร็จรูป -->
+        <div id="tab-2" class="tab-pane fade">
+            <div class="table-container">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>รูปภาพ</th>
+                            <th>รหัสสินค้า</th>
+                            <th>สินค้า</th>
+                            <th>ราคา</th>
+                            <th>สต็อก</th>
+                            <th>จอง</th>
+                            <th>คงเหลือ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><img src="img/no1.jpg" alt=""></td>
+                            <td>AN001</td>
+                            <td>แผ่นรั้วสำเร็จรูปแบบลิ่ม ขนาด 2.91 เมตร</small></td>
+                            <td>240</td>
+                            <td class="stock">50</td>
+                            <td class="reserved">21</td>
+                            <td class="sold">64</td>
+                        </tr>
+                        <tr>
+                            <td><img src="img/no1.jpg" alt=""></td>
+                            <td>AN002</td>
+                            <td>แผ่นรั้วสำเร็จรูปแบบลิ่ม ขนาด 2.42 เมตร</td>
+                            <td>210</td>
+                            <td class="stock">9</td>
+                            <td class="reserved">6</td>
+                            <td class="sold">30</td>
+                        </tr>
+                        <tr>
+                            <td><img src="img/no2.jpg" alt=""></td>
+                            <td>AN003</td>
+                            <td>แผ่นรั้วสำเร็จรูปแบบเรียบ ขนาด 2.91 เมตร</td>
+                            <td>240</td>
+                            <td class="stock">20</td>
+                            <td class="reserved">13</td>
+                            <td class="sold">0</td>
+                        </tr>
+                        <tr>
+                            <td><img src="img/no2.jpg" alt=""></td>
+                            <td>AN004</td>
+                            <td>แผ่นรั้วสำเร็จรูปแบบเรียบ ขนาด 2.42 เมตร</td>
+                            <td>210</td>
+                            <td class="stock">20</td>
+                            <td class="reserved">0</td>
+                            <td class="sold">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- เสารั้ว -->
+        <div id="tab-3" class="tab-pane fade">
+            <div class="table-container">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>รูปภาพ</th>
+                            <th>รหัสสินค้า</th>
+                            <th>สินค้า</th>
+                            <th>ราคา</th>
+                            <th>สต็อก</th>
+                            <th>จอง</th>
+                            <th>คงเหลือ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+ <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK001</td>
+                            <td>เสารั้วไอ15*15*2.00 เมตร</td>
+                            <td>260</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK002</td>
+                            <td>เสารั้วไอ15*15*2.20 เมตร</td>
+                            <td>286</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK003</td>
+                            <td>เสารั้วไอ15*15*2.50 เมตร</td>
+                            <td>325</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK004</td>
+                            <td>เสารั้วไอ15*15*2.75 เมตร</td>
+                            <td>357.50</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK005</td>
+                            <td>เสารั้วไอ15*15*3.00 เมตร</td>
+                            <td>390</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK006</td>
+                            <td>เสารั้วไอ15*15*3.50 เมตร</td>
+                            <td>455</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK007</td>
+                            <td>เสารั้วไอ15*15*4.00 เมตร</td>
+                            <td>520</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK008</td>
+                            <td>เสารั้วไอ15*15*5.00 เมตร</td>
+                            <td>650</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no3.jpg" alt=""></td>
+                            <td>AK009</td>
+                            <td>เสารั้วไอ15*15*6.00 เมตร</td>
+                            <td>780</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+         <!-- เสาเข็มไอ18 -->
+        <div id="tab-6" class="tab-pane fade">
+            <div class="table-container">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>รูปภาพ</th>
+                            <th>รหัสสินค้า</th>
+                            <th>สินค้า</th>
+                            <th>ราคา</th>
+                            <th>สต็อก</th>
+                            <th>จอง</th>
+                            <th>คงเหลือ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                         <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP001</td>
+                            <td>เสาเข็มไอ18*18*2.00 เมตร</td>
+                            <td>300</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP002</td>
+                            <td>เสาเข็มไอ18*18*3.00 เมตร</td>
+                            <td>450</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP003</td>
+                            <td>เสาเข็มไอ18*18*4.00 เมตร</td>
+                            <td>600</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP004</td>
+                            <td>เสาเข็มไอ18*18*5.00 เมตร</td>
+                            <td>750</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no4.png" alt=""></td>
+                            <td>AP005</td>
+                            <td>เสาเข็มไอ18*18*6.00 เมตร</td>
+                            <td>900</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ทับหลัง -->
+        <div id="tab-4" class="tab-pane fade">
+            <div class="table-container">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>รูปภาพ</th>
+                            <th>รหัสสินค้า</th>
+                            <th>สินค้า</th>
+                            <th>ราคา</th>
+                            <th>สต็อก</th>
+                            <th>จอง</th>
+                            <th>คงเหลือ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><img src="img/no7.jpg" alt=""></td>
+                            <td>AM001</td>
+                            <td>ทับหลังครอบ ขนาด 2.85 เมตร</td>
+                            <td>260</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no7.jpg" alt=""></td>
+                            <td>AM002</td>
+                            <td>ทับหลังครอบ ขนาด 2.42 เมตร</td>
+                            <td>260</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no6.jpg" alt=""></td>
+                            <td>AM003</td>
+                            <td>ทับหลังตัวที ขนาด 2.91 เมตร</td>
+                            <td>460</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- แผ่นกันดิน -->
+        <div id="tab-5" class="tab-pane fade">
+            <div class="table-container">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>รูปภาพ</th>
+                            <th>รหัสสินค้า</th>
+                            <th>สินค้า</th>
+                            <th>ราคา</th>
+                            <th>สต็อก</th>
+                            <th>จอง</th>
+                            <th>คงเหลือ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK001</td>
+                            <td>แผ่นกันดิน ขนาด 1.00 เมตร</td>
+                            <td>100</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK002</td>
+                            <td>แผ่นกันดิน ขนาด 1.42 เมตร</td>
+                            <td>142</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK003</td>
+                            <td>แผ่นกันดิน ขนาด 2.00 เมตร</td>
+                            <td>200</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK004</td>
+                            <td>แผ่นกันดิน ขนาด 2.42 เมตร</td>
+                            <td>1242</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK005</td>
+                            <td>แผ่นกันดิน ขนาด 2.91 เมตร</td>
+                            <td>291</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK006</td>
+                            <td>แผ่นกันดิน ขนาด 3.00 เมตร</td>
+                            <td>300</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                                                <tr>
+                            <td><img src="img/no8.jpg" alt=""></td>
+                            <td>AK007</td>
+                            <td>แผ่นกันดิน ขนาด 3.50 เมตร</td>
+                            <td>350</td>
+                            <td class="stock">89</td>
+                            <td class="reserved">25</td>
+                            <td class="sold">23</td>
+                        </tr>
+                    </tbody>
+                </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
